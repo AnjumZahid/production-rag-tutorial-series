@@ -1,0 +1,30 @@
+[project]
+name = "rag-platform"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.19.1",
+    "asyncmy>=0.2.13",
+    "cryptography>=50.0.0",
+    "email-validator>=2.3.0",
+    "fastapi>=0.141.1",
+    "google-genai>=2.18.1",
+    "httpx>=0.28.1",
+    "langchain-chroma>=1.1.0",
+    "langchain-community>=0.4.2",
+    "langchain-core>=1.5.1",
+    "langchain-huggingface>=1.2.2",
+    "pwdlib[argon2]>=0.3.1",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.2",
+    "pyjwt>=2.13.0",
+    "pypdf>=6.14.2",
+    "python-multipart>=0.0.32",
+    "redis>=8.1.0",
+    "sentence-transformers>=5.6.1",
+    "sqlalchemy[asyncio]>=2.0.51",
+    "structlog>=26.1.0",
+    "uvicorn[standard]>=0.52.1",
+]
