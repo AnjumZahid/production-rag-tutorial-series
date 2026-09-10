@@ -55,15 +55,12 @@ Each tutorial episode also has its own Git tag / GitHub Release so viewers can d
 
 ### Links
 
-**Complete RAG Tutorial Playlist:**  
-https://www.youtube.com/watch?v=lEc8LZ3xnlI&list=PLUnnqkRIf4Xw
+# Connect
 
-**YouTube:**  
-www.youtube.com/@anjumzahid789
-
-**LinkedIn:**  
-linkedin.com/in/anjumzahid789
-
+- 📚 [Complete RAG Tutorial Playlist](https://www.youtube.com/watch?v=lEc8LZ3xnlI&list=PLUnnqkRIf4Xw)
+- 🎥 [YouTube Channel](https://www.youtube.com/@anjumzahid789)
+- 💼 [LinkedIn](https://www.linkedin.com/in/anjumzahid789)
+  
 ---
 
 
@@ -546,13 +543,9 @@ Before using it in a real production environment, review the security configurat
 ---
 
 # Connect
-**Complete RAG Tutorial Playlist:**  
-https://www.youtube.com/watch?v=lEc8LZ3xnlI&list=PLUnnqkRIf4Xw
 
-**YouTube:**  
-www.youtube.com/@anjumzahid789
-
-**LinkedIn:**  
-linkedin.com/in/anjumzahid789
+- 📚 [Complete RAG Tutorial Playlist](https://www.youtube.com/watch?v=lEc8LZ3xnlI&list=PLUnnqkRIf4Xw)
+- 🎥 [YouTube Channel](https://www.youtube.com/@anjumzahid789)
+- 💼 [LinkedIn](https://www.linkedin.com/in/anjumzahid789)
 
 If this project helps you understand Retrieval-Augmented Generation (RAG) or production-oriented AI application development, consider starring the repository and following the complete tutorial series.
