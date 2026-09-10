@@ -49,13 +49,17 @@ The backend is built with **FastAPI and Python**, while the frontend uses **Next
 
 This repository is connected to my complete YouTube series where the application is developed step by step.
 
-The **`main` branch contains the latest complete application**.
+The **`main` branch contains the latest complete application**, while the **`tutorial-series` branch follows the implementation step by step starting from Video 03**, where the coding part of the series begins.
 
-Each tutorial episode also has its own Git tag / GitHub Release so viewers can download the exact project state corresponding to that video.
+Each coding episode is also published as a GitHub Release, allowing viewers to download the exact project state used in that video.
 
-### Links
+### Source Code
 
-# Connect
+- 💻 [Complete Production RAG Application](https://github.com/AnjumZahid/production-rag-tutorial-series)
+- 📘 [Step-by-Step Tutorial Code](https://github.com/AnjumZahid/production-rag-tutorial-series/tree/tutorial-series)
+- 📦 [Code Releases by Video](https://github.com/AnjumZahid/production-rag-tutorial-series/releases)
+
+### Tutorial Links
 
 - 📚 [Complete RAG Tutorial Playlist](https://www.youtube.com/watch?v=lEc8LZ3xnlI&list=PLUnnqkRIf4Xw)
 - 🎥 [YouTube Channel](https://www.youtube.com/@anjumzahid789)
