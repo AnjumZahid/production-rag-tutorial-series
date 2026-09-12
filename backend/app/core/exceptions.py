@@ -48,6 +48,15 @@ class DocumentParsingError(DocumentError):
     default_message = "The document content could not be extracted."
     status_code = 422
 
+class DocumentChunkingError(AppError):
+    code = "DOCUMENT_CHUNKING_FAILED"
+    default_message = "The document could not be split into chunks."
+    status_code = 422
+
+class DocumentMetadataError(DocumentError):
+    code = "DOCUMENT_METADATA_FAILED"
+    default_message = "Document metadata could not be prepared."
+    status_code = 422
 
 
 
