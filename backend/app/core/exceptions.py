@@ -58,6 +58,11 @@ class DocumentMetadataError(DocumentError):
     default_message = "Document metadata could not be prepared."
     status_code = 422
 
+class EmbeddingError(AppError):
+    code = "EMBEDDING_FAILED"
+    default_message = "Text could not be converted into embeddings."
+    status_code = 500
+
 
 
 # uv run python -c "from backend.app.core.exceptions import DocumentNotFoundError; error = DocumentNotFoundError(details={'path': 'docs/sample.pdf'}); print(error.code); print(error.status_code); print(error); print(error.details)"
