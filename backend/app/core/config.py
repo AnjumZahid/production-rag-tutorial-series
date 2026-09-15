@@ -96,6 +96,50 @@ class Settings(BaseSettings):
     # )
 
 
+# =======================================
+
+    # Select which vector database provider the application uses.
+
+    vector_store_provider: Literal["chroma", "qdrant"] = "chroma"
+
+    # Local directory where persistent Chroma data is stored.
+    chroma_persist_directory: str = "./data/chroma"
+
+    # Database created inside every organization-specific Chroma tenant.
+    chroma_database_name: str = "rag_app"
+
+    # Default number of relevant chunks returned during retrieval.
+    retrieval_top_k: int = Field(
+        default=4,
+        ge=1,
+        le=50,
+    )
+
+# ===========================================
+
+    # MySQL connection configuration.
+    database_url: SecretStr | None = None
+
+    database_echo: bool = False
+
+    database_pool_size: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+    )
+
+    database_max_overflow: int = Field(
+        default=20,
+        ge=0,
+        le=200,
+    )
+
+    database_pool_recycle_seconds: int = Field(
+        default=1800,
+        ge=60,
+    )
+
+    # ===============================
 
 
 

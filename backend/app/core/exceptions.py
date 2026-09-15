@@ -68,6 +68,15 @@ class VectorStoreError(AppError):
     default_message = "The vector store operation failed."
     status_code = 500
 
+class DatabaseError(AppError):
+    code = "DATABASE_ERROR"
+    default_message = "A database operation failed."
+    status_code = 500
+
+class DatabaseConnectionError(DatabaseError):
+    code = "DATABASE_CONNECTION_ERROR"
+    default_message = "The application could not connect to the database."
+    status_code = 503
 
 
 
