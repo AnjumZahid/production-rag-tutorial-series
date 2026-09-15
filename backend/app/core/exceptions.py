@@ -63,6 +63,15 @@ class EmbeddingError(AppError):
     default_message = "Text could not be converted into embeddings."
     status_code = 500
 
+class VectorStoreError(AppError):
+    code = "VECTOR_STORE_ERROR"
+    default_message = "The vector store operation failed."
+    status_code = 500
+
+
+
+
+
 
 
 # uv run python -c "from backend.app.core.exceptions import DocumentNotFoundError; error = DocumentNotFoundError(details={'path': 'docs/sample.pdf'}); print(error.code); print(error.status_code); print(error); print(error.details)"
