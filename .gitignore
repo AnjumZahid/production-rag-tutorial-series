@@ -1,3 +1,8 @@
 .env
 __pycache__/
 *.py[cod]
+
+.env.docker
+
+data/chroma/
+data/chroma_test/

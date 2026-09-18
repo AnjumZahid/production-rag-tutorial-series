@@ -1,0 +1,35 @@
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: ragdb-mysql
+    restart: unless-stopped
+
+    env_file:
+      - .env.docker
+
+    ports:
+      - "127.0.0.1:3306:3306"
+
+    volumes:
+      - rag_mysql_data:/var/lib/mysql
+
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  rag_mysql_data:
+    name: rag_mysql_data
+
