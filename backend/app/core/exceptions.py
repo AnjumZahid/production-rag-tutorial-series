@@ -78,6 +78,13 @@ class DatabaseConnectionError(DatabaseError):
     default_message = "The application could not connect to the database."
     status_code = 503
 
+class DuplicateDocumentError(AppError):
+    code = "DUPLICATE_DOCUMENT"
+    default_message = (
+        "This document has already been uploaded "
+        "to the selected knowledge base."
+    )
+    status_code = 409
 
 
 
