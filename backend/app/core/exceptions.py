@@ -86,6 +86,10 @@ class DuplicateDocumentError(AppError):
     )
     status_code = 409
 
+class DocumentIngestionError(AppError):
+    code = "DOCUMENT_INGESTION_ERROR"
+    default_message = "The document could not be ingested."
+    status_code = 500
 
 
 
