@@ -53,27 +53,18 @@ class DocumentChunkerProtocol(Protocol):
         """Split cleaned documents into chunks."""
 
 
-class EmbeddingProviderProtocol(Protocol):
-    def embed_documents(
-        self,
-        texts: Sequence[str],
-    ) -> list[list[float]]:
-        """Generate document embeddings."""
-
-
 class VectorStoreProtocol(Protocol):
     def add_documents(
         self,
         documents: Sequence[Document],
-        embeddings: Sequence[Sequence[float]],
     ) -> list[str]:
-        """Store documents and return their vector IDs."""
+        """Store documents and return stored chunk/vector IDs."""
 
-    def delete_documents(
+    def delete_chunks(
         self,
-        vector_ids: Sequence[str],
+        chunk_ids: Sequence[str],
     ) -> None:
-        """Delete vectors by their IDs."""
+        """Delete stored chunks/vectors by IDs."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,14 +82,8 @@ class DocumentIngestionService:
     """
     Coordinates the complete offline document-indexing workflow.
 
-    The individual components remain independent. This service controls:
-    - duplicate checking
-    - MySQL status changes
-    - document processing
-    - embedding generation
-    - vector storage
-    - MySQL chunk references
-    - failure cleanup
+    ChromaVectorStore generates embeddings internally through
+    its configured embedding provider.
     """
 
     def __init__(
@@ -110,11 +95,11 @@ class DocumentIngestionService:
         parser: DocumentParserProtocol,
         cleaner: TextCleanerProtocol,
         chunker: DocumentChunkerProtocol,
-        embedding_provider: EmbeddingProviderProtocol,
         vector_store: VectorStoreProtocol,
         embedding_provider_name: str,
         embedding_model_name: str,
         vector_store_provider_name: str,
+        embedding_dimension: int | None = None,
     ) -> None:
         self.session = session
         self.repository = repository
@@ -122,11 +107,11 @@ class DocumentIngestionService:
         self.parser = parser
         self.cleaner = cleaner
         self.chunker = chunker
-        self.embedding_provider = embedding_provider
         self.vector_store = vector_store
         self.embedding_provider_name = embedding_provider_name
         self.embedding_model_name = embedding_model_name
         self.vector_store_provider_name = vector_store_provider_name
+        self.embedding_dimension = embedding_dimension
 
     async def ingest_pdf(
         self,
@@ -180,7 +165,6 @@ class DocumentIngestionService:
 
             document_id = document_record.id
 
-            # Preserve the pending record even if later processing fails.
             await self.session.commit()
 
             await self.repository.update_status(
@@ -237,38 +221,21 @@ class DocumentIngestionService:
                 filename=resolved_path.name,
             )
 
-            chunk_texts = [
-                chunk.page_content
-                for chunk in chunks
-            ]
-
-            embeddings = await asyncio.to_thread(
-                self.embedding_provider.embed_documents,
-                chunk_texts,
-            )
-
-            self._validate_embeddings(
-                chunks=chunks,
-                embeddings=embeddings,
-                document_id=document_id,
-            )
-
             stored_vector_ids = await asyncio.to_thread(
                 self.vector_store.add_documents,
-                chunks,
-                embeddings,
+                list(chunks),
             )
 
             if len(stored_vector_ids) != len(chunks):
                 raise DocumentIngestionError(
                     message=(
                         "The vector store returned an unexpected "
-                        "number of vector IDs."
+                        "number of stored IDs."
                     ),
                     details={
                         "document_id": document_id,
                         "chunk_count": len(chunks),
-                        "vector_id_count": len(stored_vector_ids),
+                        "stored_id_count": len(stored_vector_ids),
                     },
                 )
 
@@ -284,8 +251,6 @@ class DocumentIngestionService:
                 chunk_references=chunk_references,
             )
 
-            embedding_dimension = len(embeddings[0])
-
             completed_document = await self.repository.update_status(
                 document_id=document_id,
                 organization_id=organization_id,
@@ -293,7 +258,7 @@ class DocumentIngestionService:
                 status=DocumentStatus.COMPLETED,
                 embedding_provider=self.embedding_provider_name,
                 embedding_model=self.embedding_model_name,
-                embedding_dimension=embedding_dimension,
+                embedding_dimension=self.embedding_dimension,
                 vector_store_provider=self.vector_store_provider_name,
                 total_pages=len(loaded_documents),
                 error_message=None,
@@ -325,8 +290,8 @@ class DocumentIngestionService:
             if stored_vector_ids:
                 try:
                     await asyncio.to_thread(
-                        self.vector_store.delete_documents,
-                        stored_vector_ids,
+                        self.vector_store.delete_chunks,
+                        list(stored_vector_ids),
                     )
                 except Exception as cleanup_exc:
                     logger.exception(
@@ -439,8 +404,6 @@ class DocumentIngestionService:
     ) -> None:
         """
         Add mandatory ownership and document metadata to every chunk.
-
-        Existing source, page and chunk metadata are preserved.
         """
 
         for chunk in chunks:
@@ -453,47 +416,6 @@ class DocumentIngestionService:
                     "file_hash": file_hash,
                     "filename": filename,
                 }
-            )
-
-    @staticmethod
-    def _validate_embeddings(
-        *,
-        chunks: Sequence[Document],
-        embeddings: Sequence[Sequence[float]],
-        document_id: str,
-    ) -> None:
-        if len(embeddings) != len(chunks):
-            raise DocumentIngestionError(
-                message=(
-                    "The embedding provider returned an unexpected "
-                    "number of embeddings."
-                ),
-                details={
-                    "document_id": document_id,
-                    "chunk_count": len(chunks),
-                    "embedding_count": len(embeddings),
-                },
-            )
-
-        if not embeddings or not embeddings[0]:
-            raise DocumentIngestionError(
-                message="The embedding provider returned empty embeddings.",
-                details={
-                    "document_id": document_id,
-                },
-            )
-
-        expected_dimension = len(embeddings[0])
-
-        if any(
-            len(embedding) != expected_dimension
-            for embedding in embeddings
-        ):
-            raise DocumentIngestionError(
-                message="Embedding dimensions are inconsistent.",
-                details={
-                    "document_id": document_id,
-                },
             )
 
     @staticmethod
