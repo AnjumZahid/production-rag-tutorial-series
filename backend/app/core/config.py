@@ -142,7 +142,91 @@ class Settings(BaseSettings):
     # ===============================
 
 
+    # ===========================================================
+    # LLM provider configuration
+    # ===========================================================
 
+    llm_provider: Literal["openai", "gemini"] = "gemini"
+
+    # ===========================================================
+    # OpenAI LLM configuration
+    # ===========================================================
+
+    openai_llm_model: str = "gpt-5.4-mini"
+
+    openai_llm_timeout_seconds: float = Field(
+        default=60.0,
+        ge=1.0,
+        le=300.0,
+    )
+
+    openai_llm_max_retries: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+    )
+
+    openai_llm_max_output_tokens: int = Field(
+        default=1200,
+        ge=64,
+        le=20_000,
+    )
+
+    openai_llm_reasoning_effort: Literal[
+        "none",
+        "low",
+        "medium",
+        "high",
+    ] = "low"
+
+    # ===========================================================
+    # Google Gemini LLM configuration
+    # ===========================================================
+
+    gemini_api_key: SecretStr | None = None
+
+    gemini_llm_model: str = "gemini-2.5-flash"
+
+    gemini_llm_timeout_seconds: float = Field(
+        default=60.0,
+        ge=1.0,
+        le=600.0,
+    )
+
+    gemini_llm_max_retries: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+    )
+
+    gemini_llm_initial_retry_delay_seconds: float = Field(
+        default=1.0,
+        ge=0.1,
+        le=60.0,
+    )
+
+    gemini_llm_max_retry_delay_seconds: float = Field(
+        default=30.0,
+        ge=1.0,
+        le=300.0,
+    )
+
+    gemini_llm_max_output_tokens: int = Field(
+        default=1200,
+        ge=64,
+        le=65_536,
+    )
+
+    gemini_llm_temperature: float = Field(
+        default=0.2,
+        ge=0.0,
+        le=2.0,
+    )
+
+    gemini_llm_thinking_budget: int = Field(
+        default=0,
+        ge=-1,
+    )
 
 
 

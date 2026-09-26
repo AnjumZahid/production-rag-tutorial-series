@@ -8,6 +8,7 @@ dependencies = [
     "alembic>=1.19.1",
     "asyncmy>=0.2.13",
     "cryptography>=50.0.0",
+    "google-genai>=2.18.1",
     "langchain-chroma>=1.1.0",
     "langchain-community>=0.4.2",
     "langchain-core>=1.5.1",

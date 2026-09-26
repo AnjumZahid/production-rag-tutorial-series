@@ -91,7 +91,26 @@ class DocumentIngestionError(AppError):
     default_message = "The document could not be ingested."
     status_code = 500
 
+class InvalidQueryError(AppError):
+    code = "INVALID_QUERY"
+    default_message = "The retrieval query is invalid."
+    status_code = 422
 
+
+class RetrievalError(AppError):
+    code = "RETRIEVAL_ERROR"
+    default_message = "Relevant document context could not be retrieved."
+    status_code = 500
+
+class GenerationError(AppError):
+    code = "GENERATION_ERROR"
+    default_message = "A grounded answer could not be generated."
+    status_code = 500
+
+class LLMProviderError(AppError):
+    code = "LLM_PROVIDER_ERROR"
+    default_message = "The language-model provider request failed."
+    status_code = 503
 
 
 # uv run python -c "from backend.app.core.exceptions import DocumentNotFoundError; error = DocumentNotFoundError(details={'path': 'docs/sample.pdf'}); print(error.code); print(error.status_code); print(error); print(error.details)"
