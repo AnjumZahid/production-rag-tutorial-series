@@ -117,11 +117,19 @@ class InvalidUploadError(AppError):
     default_message = "The uploaded file is invalid."
     status_code = 400
 
-
 class AuthenticationError(AppError):
     code = "AUTHENTICATION_ERROR"
-    default_message = "Request identity is missing or invalid."
+    default_message = (
+        "Valid authentication credentials are required."
+    )
     status_code = 401
 
+
+class AuthorizationError(AppError):
+    code = "AUTHORIZATION_ERROR"
+    default_message = (
+        "You are not authorized to perform this action."
+    )
+    status_code = 403
 
 # uv run python -c "from backend.app.core.exceptions import DocumentNotFoundError; error = DocumentNotFoundError(details={'path': 'docs/sample.pdf'}); print(error.code); print(error.status_code); print(error); print(error.details)"

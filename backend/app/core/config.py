@@ -246,6 +246,30 @@ class Settings(BaseSettings):
         le=20,
     )
 
+    # ===========================================================
+    # Authentication / JWT configuration
+    # ===========================================================
+
+    auth_jwt_secret_key: SecretStr
+
+    auth_jwt_algorithm: str = "HS256"
+
+    auth_jwt_issuer: str = "rag-app"
+
+    auth_jwt_audience: str = "rag-app-api"
+
+    auth_access_token_expire_minutes: int = Field(
+        default=60,
+        ge=1,
+        le=1440,
+    )
+
+    auth_jwt_leeway_seconds: int = Field(
+        default=10,
+        ge=0,
+        le=300,
+    )
+
 
 
 

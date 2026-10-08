@@ -7,6 +7,7 @@ from backend.app.api.dependencies import (
     get_embedding_provider_dependency,
     get_llm_provider_dependency,
 )
+from backend.app.auth import create_access_token
 from backend.app.retrieval import RetrievedChunk
 
 
@@ -25,7 +26,7 @@ class FakeLLMProvider:
         system_prompt: str,
         user_prompt: str,
     ) -> str:
-        return "A healthy diet is recommended [S1]."
+        return "A healthy diet and physical activity are recommended [S1]."
 
 
 class FakeVectorStore:
@@ -67,12 +68,16 @@ class FakeDocumentIngestionService:
         user_id: str,
         knowledge_base_id: str,
     ) -> FakeIngestionResult:
+        assert organization_id == "test-org"
+        assert user_id == "test-user"
+        assert knowledge_base_id == "test-kb"
+
         return FakeIngestionResult()
 
 
 class FakeRAGResult:
     query = "What lifestyle interventions are recommended?"
-    answer = "A healthy diet is recommended [S1]."
+    answer = "A healthy diet and physical activity are recommended [S1]."
     grounded = True
     citations = ("S1",)
     retrieved_chunk_count = 1
@@ -119,6 +124,10 @@ def override_llm_provider():
 
 
 def fake_get_vector_store(**kwargs):
+    assert kwargs["organization_id"] == "test-org"
+    assert kwargs["user_id"] == "test-user"
+    assert kwargs["knowledge_base_id"] == "test-kb"
+
     return FakeVectorStore()
 
 
@@ -144,90 +153,128 @@ def main() -> None:
         get_llm_provider_dependency
     ] = override_llm_provider
 
-    client = TestClient(app)
+    token = create_access_token(
+        user_id="test-user",
+        organization_id="test-org",
+        expires_minutes=60,
+    )
 
-    headers = {
-        "X-Organization-ID": "test-org",
-        "X-User-ID": "test-user",
+    auth_headers = {
+        "Authorization": f"Bearer {token}",
     }
 
-    health_response = client.get("/api/v1/health")
+    with TestClient(app) as client:
+        health_response = client.get("/api/v1/health")
 
-    assert health_response.status_code == 200
-    assert health_response.json()["status"] == "healthy"
+        assert health_response.status_code == 200
+        health_json = health_response.json()
+        assert health_json["status"] == "healthy"
 
-    upload_response = client.post(
-        "/api/v1/documents",
-        headers=headers,
-        data={
-            "knowledge_base_id": "test-kb",
-        },
-        files={
-            "file": (
-                "guidelines.pdf",
-                b"%PDF-1.4 fake pdf content",
-                "application/pdf",
+        missing_token_response = client.post(
+            "/api/v1/rag/query",
+            json={
+                "knowledge_base_id": "test-kb",
+                "query": "What is recommended?",
+                "k": 5,
+            },
+        )
+
+        assert missing_token_response.status_code == 401
+        assert (
+            missing_token_response.headers.get(
+                "www-authenticate"
             )
-        },
-    )
+            == "Bearer"
+        )
 
-    assert upload_response.status_code == 200
-    upload_json = upload_response.json()
-    assert upload_json["document_id"] == "document-123"
-    assert upload_json["status"] == "completed"
-    assert upload_json["chunk_count"] == 319
-    assert upload_json["vector_count"] == 319
+        invalid_token_response = client.post(
+            "/api/v1/rag/query",
+            headers={
+                "Authorization": "Bearer invalid-token"
+            },
+            json={
+                "knowledge_base_id": "test-kb",
+                "query": "What is recommended?",
+                "k": 5,
+            },
+        )
 
-    invalid_upload_response = client.post(
-        "/api/v1/documents",
-        headers=headers,
-        data={
-            "knowledge_base_id": "test-kb",
-        },
-        files={
-            "file": (
-                "notes.txt",
-                b"not a pdf",
-                "text/plain",
-            )
-        },
-    )
+        assert invalid_token_response.status_code == 401
 
-    assert invalid_upload_response.status_code == 400
-    assert (
-        invalid_upload_response.json()["error"]["code"]
-        == "INVALID_UPLOAD"
-    )
+        upload_response = client.post(
+            "/api/v1/documents",
+            headers=auth_headers,
+            data={
+                "knowledge_base_id": "test-kb",
+            },
+            files={
+                "file": (
+                    "guidelines.pdf",
+                    b"%PDF-1.4 fake pdf content",
+                    "application/pdf",
+                )
+            },
+        )
 
-    query_response = client.post(
-        "/api/v1/rag/query",
-        headers=headers,
-        json={
-            "knowledge_base_id": "test-kb",
-            "query": (
-                "What lifestyle interventions are recommended?"
-            ),
-            "k": 5,
-            "document_id": "document-123",
-        },
-    )
+        assert upload_response.status_code == 201
+        upload_json = upload_response.json()
+        assert upload_json["document_id"] == "document-123"
+        assert upload_json["status"] == "completed"
+        assert upload_json["filename"] == "guidelines.pdf"
+        assert upload_json["chunk_count"] == 319
+        assert upload_json["vector_count"] == 319
 
-    assert query_response.status_code == 200
-    query_json = query_response.json()
-    assert query_json["grounded"] is True
-    assert query_json["citations"] == ["S1"]
-    assert query_json["sources"][0]["citation_id"] == "S1"
-    assert query_json["retrieved_chunk_count"] == 1
+        query_response = client.post(
+            "/api/v1/rag/query",
+            headers=auth_headers,
+            json={
+                "knowledge_base_id": "test-kb",
+                "query": (
+                    "What lifestyle interventions are recommended?"
+                ),
+                "k": 5,
+                "document_id": "document-123",
+            },
+        )
+
+        assert query_response.status_code == 200
+        query_json = query_response.json()
+        assert query_json["grounded"] is True
+        assert query_json["citations"] == ["S1"]
+        assert query_json["sources"][0]["citation_id"] == "S1"
+        assert query_json["retrieved_chunk_count"] == 1
+
+        invalid_upload_response = client.post(
+            "/api/v1/documents",
+            headers=auth_headers,
+            data={
+                "knowledge_base_id": "test-kb",
+            },
+            files={
+                "file": (
+                    "notes.txt",
+                    b"not a pdf",
+                    "text/plain",
+                )
+            },
+        )
+
+        assert invalid_upload_response.status_code == 400
+        assert (
+            invalid_upload_response.json()["error"]["code"]
+            == "INVALID_UPLOAD"
+        )
 
     print("\n=== FASTAPI ENDPOINT TEST ===")
-    print("Health endpoint confirmed.")
-    print("Document upload endpoint confirmed.")
-    print("Invalid non-PDF rejection confirmed.")
-    print("RAG query endpoint confirmed.")
+    print("Health:", health_json)
+    print("Missing-token protection confirmed.")
+    print("Invalid-token protection confirmed.")
+    print("Upload document:", upload_json["document_id"])
+    print("RAG answer:", query_json["answer"])
+    print("Invalid PDF protection confirmed.")
     print("FastAPI endpoint test passed successfully.")
 
 
 if __name__ == "__main__":
     main()
-
 # uv run python -m tests.test_api_endpoints

@@ -1,5 +1,5 @@
-import tempfile
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from fastapi import (
     APIRouter,
@@ -7,6 +7,7 @@ from fastapi import (
     File,
     Form,
     UploadFile,
+    status,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,6 +62,7 @@ async def health() -> HealthResponse:
 @router.post(
     "/documents",
     response_model=DocumentUploadResponse,
+    status_code=status.HTTP_201_CREATED,
 )
 async def upload_document(
     knowledge_base_id: str = Form(...),
@@ -77,10 +79,22 @@ async def upload_document(
 ) -> DocumentUploadResponse:
     validate_pdf_upload(file)
 
-    temp_path: Path | None = None
+    with TemporaryDirectory(
+        prefix="rag_upload_"
+    ) as temporary_directory:
+        safe_filename = Path(
+            file.filename or "document.pdf"
+        ).name
 
-    try:
-        temp_path = await save_upload_to_temp_file(file)
+        temporary_path = (
+            Path(temporary_directory)
+            / safe_filename
+        )
+
+        await save_upload_to_temp_file(
+            file=file,
+            destination=temporary_path,
+        )
 
         vector_store = get_vector_store(
             embedding_provider=embedding_provider,
@@ -124,7 +138,7 @@ async def upload_document(
         )
 
         result = await ingestion_service.ingest_pdf(
-            file_path=temp_path,
+            file_path=temporary_path,
             organization_id=identity.organization_id,
             user_id=identity.user_id,
             knowledge_base_id=knowledge_base_id,
@@ -133,15 +147,11 @@ async def upload_document(
         return DocumentUploadResponse(
             document_id=result.document_id,
             status=result.status,
-            filename=file.filename or temp_path.name,
+            filename=safe_filename,
             total_pages=result.total_pages,
             chunk_count=result.chunk_count,
             vector_count=len(result.vector_ids),
         )
-
-    finally:
-        if temp_path is not None and temp_path.exists():
-            temp_path.unlink(missing_ok=True)
 
 
 @router.post(
@@ -236,16 +246,13 @@ def validate_pdf_upload(file: UploadFile) -> None:
 
 
 async def save_upload_to_temp_file(
+    *,
     file: UploadFile,
-) -> Path:
+    destination: Path,
+) -> None:
     total_bytes = 0
 
-    with tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=".pdf",
-    ) as temp_file:
-        temp_path = Path(temp_file.name)
-
+    with destination.open("wb") as temp_file:
         while True:
             chunk = await file.read(1024 * 1024)
 
@@ -255,8 +262,6 @@ async def save_upload_to_temp_file(
             total_bytes += len(chunk)
 
             if total_bytes > settings.upload_max_bytes:
-                temp_path.unlink(missing_ok=True)
-
                 raise InvalidUploadError(
                     message="The uploaded PDF is too large.",
                     details={
@@ -268,10 +273,8 @@ async def save_upload_to_temp_file(
             temp_file.write(chunk)
 
     if total_bytes == 0:
-        temp_path.unlink(missing_ok=True)
+        destination.unlink(missing_ok=True)
 
         raise InvalidUploadError(
             message="The uploaded PDF is empty."
         )
-
-    return temp_path

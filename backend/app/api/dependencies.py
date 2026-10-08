@@ -1,24 +1,35 @@
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import Annotated
 
-from fastapi import Header
+from fastapi import Depends
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBearer,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.auth import decode_access_token
 from backend.app.core.exceptions import AuthenticationError
 from backend.app.database.session import get_session_factory
+from backend.app.embeddings.base import BaseEmbeddingProvider
 from backend.app.embeddings.factory import get_embedding_provider
-from backend.app.llms import get_llm_provider
+from backend.app.llms import BaseLLMProvider, get_llm_provider
 
 
 @dataclass(frozen=True, slots=True)
 class RequestIdentity:
     organization_id: str
     user_id: str
+    token_id: str
 
 
-_embedding_provider = None
-_llm_provider = None
+bearer_scheme = HTTPBearer(
+    scheme_name="BearerAuth",
+    auto_error=False,
+)
+
+_embedding_provider: BaseEmbeddingProvider | None = None
+_llm_provider: BaseLLMProvider | None = None
 
 
 async def get_database_session_dependency() -> AsyncGenerator[
@@ -32,28 +43,28 @@ async def get_database_session_dependency() -> AsyncGenerator[
 
 
 def get_request_identity(
-    x_organization_id: Annotated[
-        str | None,
-        Header(alias="X-Organization-ID"),
-    ] = None,
-    x_user_id: Annotated[
-        str | None,
-        Header(alias="X-User-ID"),
-    ] = None,
+    credentials: HTTPAuthorizationCredentials | None = Depends(
+        bearer_scheme
+    ),
 ) -> RequestIdentity:
-    if not x_organization_id:
+    if credentials is None:
         raise AuthenticationError(
-            message="X-Organization-ID header is required."
+            message="Bearer access token is required."
         )
 
-    if not x_user_id:
+    if credentials.scheme.lower() != "bearer":
         raise AuthenticationError(
-            message="X-User-ID header is required."
+            message="Bearer authentication is required."
         )
+
+    claims = decode_access_token(
+        credentials.credentials
+    )
 
     return RequestIdentity(
-        organization_id=x_organization_id.strip(),
-        user_id=x_user_id.strip(),
+        organization_id=claims.organization_id,
+        user_id=claims.user_id,
+        token_id=claims.token_id,
     )
 
 

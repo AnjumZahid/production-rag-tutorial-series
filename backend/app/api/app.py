@@ -1,3 +1,5 @@
+# uv add fastapi "uvicorn[standard]" python-multipart httpx
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -44,20 +46,26 @@ def create_app() -> FastAPI:
             },
         )
 
-    @app.exception_handler(RequestValidationError)
-    async def validation_error_handler(
+    @app.exception_handler(AppError)
+    async def app_error_handler(
         request: Request,
-        exc: RequestValidationError,
+        exc: AppError,
     ) -> JSONResponse:
+        headers = None
+
+        if exc.status_code == 401:
+            headers = {
+                "WWW-Authenticate": "Bearer",
+            }
+
         return JSONResponse(
-            status_code=422,
+            status_code=exc.status_code,
+            headers=headers,
             content={
                 "error": {
-                    "code": "REQUEST_VALIDATION_ERROR",
-                    "message": "The request payload is invalid.",
-                    "details": {
-                        "errors": exc.errors(),
-                    },
+                    "code": exc.code,
+                    "message": exc.message,
+                    "details": exc.details,
                 }
             },
         )
