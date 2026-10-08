@@ -197,7 +197,7 @@ class GeminiLLMProvider(BaseLLMProvider):
                 )
 
                 if not should_retry:
-                    logger.exception(
+                    logger.errorr(
                         "gemini_generation_failed",
                         model=self.model_name,
                         status_code=status_code,
@@ -238,7 +238,7 @@ class GeminiLLMProvider(BaseLLMProvider):
                 time.sleep(delay)
 
             except Exception as exc:
-                logger.exception(
+                logger.error(
                     "gemini_generation_failed",
                     model=self.model_name,
                     error_type=type(exc).__name__,
@@ -249,9 +249,8 @@ class GeminiLLMProvider(BaseLLMProvider):
                         "provider": "gemini",
                         "model": self.model_name,
                         "error_type": type(exc).__name__,
-                        "error_message": str(exc),
                     }
-                ) from exc
+                ) from None
 
         raise LLMProviderError(
             message=(

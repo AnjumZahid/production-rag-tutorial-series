@@ -20,7 +20,11 @@ from backend.app.retrieval import (
 
 logger = get_logger(__name__)
 
-CITATION_PATTERN = re.compile(r"\[(S\d+)\]")
+CITATION_GROUP_PATTERN = re.compile(
+    r"\[\s*((?:S\d+\s*,\s*)*S\d+)\s*\]"
+)
+
+CITATION_ID_PATTERN = re.compile(r"S\d+")
 
 
 class LLMProviderProtocol(Protocol):
@@ -131,7 +135,7 @@ class GroundedAnswerService:
         except AppError:
             raise
         except Exception as exc:
-            logger.exception(
+            logger.error(
                 "grounded_answer_generation_failed",
                 query_length=len(retrieval_result.query),
                 source_count=len(selected_chunks),
@@ -141,10 +145,9 @@ class GroundedAnswerService:
             raise GenerationError(
                 details={
                     "error_type": type(exc).__name__,
-                    "error_message": str(exc),
                     "source_count": len(selected_chunks),
                 }
-            ) from exc
+            ) from None
 
         answer = self._normalize_answer(raw_answer)
 
@@ -321,17 +324,29 @@ class GroundedAnswerService:
     @staticmethod
     def _extract_citations(answer: str) -> list[str]:
         """
-        Extract unique citation IDs while preserving appearance order.
+        Extract individual and grouped citation IDs.
+
+        Supported examples:
+        [S1]
+        [S1, S2]
+        [S1, S2, S3]
         """
 
         citations: list[str] = []
         seen: set[str] = set()
 
-        for citation_id in CITATION_PATTERN.findall(answer):
-            if citation_id in seen:
-                continue
+        for citation_group in CITATION_GROUP_PATTERN.findall(
+            answer
+        ):
+            citation_ids = CITATION_ID_PATTERN.findall(
+                citation_group
+            )
 
-            citations.append(citation_id)
-            seen.add(citation_id)
+            for citation_id in citation_ids:
+                if citation_id in seen:
+                    continue
+
+                citations.append(citation_id)
+                seen.add(citation_id)
 
         return citations

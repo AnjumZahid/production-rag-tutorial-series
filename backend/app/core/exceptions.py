@@ -112,5 +112,16 @@ class LLMProviderError(AppError):
     default_message = "The language-model provider request failed."
     status_code = 503
 
+class InvalidUploadError(AppError):
+    code = "INVALID_UPLOAD"
+    default_message = "The uploaded file is invalid."
+    status_code = 400
+
+
+class AuthenticationError(AppError):
+    code = "AUTHENTICATION_ERROR"
+    default_message = "Request identity is missing or invalid."
+    status_code = 401
+
 
 # uv run python -c "from backend.app.core.exceptions import DocumentNotFoundError; error = DocumentNotFoundError(details={'path': 'docs/sample.pdf'}); print(error.code); print(error.status_code); print(error); print(error.details)"

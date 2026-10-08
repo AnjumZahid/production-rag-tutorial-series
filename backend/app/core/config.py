@@ -228,6 +228,23 @@ class Settings(BaseSettings):
         ge=-1,
     )
 
+    # ===========================================================
+    # API configuration
+    # ===========================================================
+
+    api_prefix: str = "/api/v1"
+
+    upload_max_bytes: int = Field(
+        default=20_000_000,
+        ge=1_000,
+        le=500_000_000,
+    )
+
+    retrieval_top_k: int = Field(
+        default=4,
+        ge=1,
+        le=20,
+    )
 
 
 

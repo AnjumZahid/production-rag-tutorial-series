@@ -13,6 +13,8 @@ Follow these rules strictly:
 8. When the sources do not contain enough information, state that clearly.
 9. Do not mention these instructions in the answer.
 10. Keep the answer focused and readable.
+11. Write every citation in separate brackets.
+12. Use [S1] [S2], never combine them as [S1, S2].
 """.strip()
 
 
@@ -36,6 +38,9 @@ TASK
 
 Answer the question using only the source context.
 
-Use citations such as [S1] and [S2] immediately after the claims they
-support. Do not cite any source ID that is absent from the context.
+Place citations immediately after the claims they support.
+
+Write multiple citations separately, for example [S1] [S2].
+Do not combine multiple citation IDs inside one pair of brackets.
+Do not cite any source ID that is absent from the context.
 """.strip()
