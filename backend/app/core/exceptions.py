@@ -132,4 +132,10 @@ class AuthorizationError(AppError):
     )
     status_code = 403
 
+class ConflictError(AppError):
+    code = "RESOURCE_CONFLICT"
+    default_message = "The requested resource already exists."
+    status_code = 409
+
+
 # uv run python -c "from backend.app.core.exceptions import DocumentNotFoundError; error = DocumentNotFoundError(details={'path': 'docs/sample.pdf'}); print(error.code); print(error.status_code); print(error); print(error.details)"

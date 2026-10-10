@@ -1,112 +1,123 @@
-from datetime import datetime, timedelta, timezone
-from uuid import uuid4
-
-import jwt
-
-from backend.app.auth import (
-    create_access_token,
-    decode_access_token,
-)
-from backend.app.core.config import settings
+from backend.app.auth.jwt import JWTService
 from backend.app.core.exceptions import AuthenticationError
 
 
-def make_raw_token(
+TEST_SECRET = "test-secret-key-for-jwt-auth-tests"
+
+
+def build_jwt_service(
     *,
-    user_id: str = "test-user",
-    organization_id: str = "test-org",
-    token_type: str = "access",
-    issuer: str | None = None,
-    audience: str | None = None,
-    expires_delta: timedelta | None = None,
-    secret_key: str | None = None,
-) -> str:
-    now = datetime.now(timezone.utc)
-
-    expires_at = now + (
-        expires_delta
-        if expires_delta is not None
-        else timedelta(minutes=60)
-    )
-
-    payload = {
-        "sub": user_id,
-        "organization_id": organization_id,
-        "type": token_type,
-        "jti": uuid4().hex,
-        "iat": now,
-        "exp": expires_at,
-        "iss": issuer or settings.auth_jwt_issuer,
-        "aud": audience or settings.auth_jwt_audience,
-    }
-
-    return jwt.encode(
-        payload,
-        secret_key
-        or settings.auth_jwt_secret_key.get_secret_value(),
-        algorithm=settings.auth_jwt_algorithm,
+    issuer: str = "rag-app",
+    audience: str = "rag-app-api",
+) -> JWTService:
+    return JWTService(
+        secret_key=TEST_SECRET,
+        algorithm="HS256",
+        issuer=issuer,
+        audience=audience,
+        access_token_expire_minutes=60,
+        refresh_token_expire_days=30,
+        leeway_seconds=0,
     )
 
 
-def assert_authentication_error(token: str) -> None:
-    failed = False
-
+def expect_auth_error(
+    callback,
+    message: str,
+) -> None:
     try:
-        decode_access_token(token)
-
+        callback()
     except AuthenticationError:
-        failed = True
+        print(message)
+        return
 
-    assert failed is True
+    raise AssertionError(
+        "Expected AuthenticationError, but no error was raised."
+    )
 
 
 def main() -> None:
-    valid_token = create_access_token(
+    print("=== JWT AUTHENTICATION TEST ===")
+
+    service = build_jwt_service()
+
+    access_token = service.create_access_token(
         user_id="test-user",
         organization_id="test-org",
-        expires_minutes=60,
     )
 
-    claims = decode_access_token(valid_token)
+    access_claims = service.decode_access_token(access_token)
 
-    assert claims.user_id == "test-user"
-    assert claims.organization_id == "test-org"
-    assert claims.token_id
-    assert claims.expires_at > datetime.now(timezone.utc)
+    assert access_claims.user_id == "test-user"
+    assert access_claims.organization_id == "test-org"
+    assert access_claims.token_type == "access"
 
-    expired_token = make_raw_token(
-        expires_delta=timedelta(minutes=-10)
-    )
-    assert_authentication_error(expired_token)
-
-    wrong_audience_token = make_raw_token(
-        audience="wrong-audience"
-    )
-    assert_authentication_error(wrong_audience_token)
-
-    wrong_issuer_token = make_raw_token(
-        issuer="wrong-issuer"
-    )
-    assert_authentication_error(wrong_issuer_token)
-
-    invalid_signature_token = make_raw_token(
-        secret_key="wrong-secret"
-    )
-    assert_authentication_error(invalid_signature_token)
-
-    wrong_type_token = make_raw_token(
-        token_type="refresh"
-    )
-    assert_authentication_error(wrong_type_token)
-
-    print("\n=== JWT AUTHENTICATION TEST ===")
-    print("Valid token confirmed.")
+    print("Valid access token confirmed.")
     print("User claim confirmed.")
     print("Organization claim confirmed.")
-    print("Expired token rejected.")
-    print("Wrong audience rejected.")
-    print("Wrong issuer rejected.")
-    print("Invalid signature/token rejected.")
+
+    refresh_token = service.create_refresh_token(
+        user_id="test-user",
+        organization_id="test-org",
+    )
+
+    refresh_claims = service.decode_refresh_token(refresh_token)
+
+    assert refresh_claims.user_id == "test-user"
+    assert refresh_claims.organization_id == "test-org"
+    assert refresh_claims.token_type == "refresh"
+
+    print("Valid refresh token confirmed.")
+
+    expired_token = service.create_access_token(
+        user_id="test-user",
+        organization_id="test-org",
+        expires_minutes=-1,
+    )
+
+    expect_auth_error(
+        lambda: service.decode_access_token(expired_token),
+        "Expired token rejected.",
+    )
+
+    wrong_audience_service = build_jwt_service(
+        audience="wrong-audience"
+    )
+
+    wrong_audience_token = wrong_audience_service.create_access_token(
+        user_id="test-user",
+        organization_id="test-org",
+    )
+
+    expect_auth_error(
+        lambda: service.decode_access_token(wrong_audience_token),
+        "Wrong audience rejected.",
+    )
+
+    wrong_issuer_service = build_jwt_service(
+        issuer="wrong-issuer"
+    )
+
+    wrong_issuer_token = wrong_issuer_service.create_access_token(
+        user_id="test-user",
+        organization_id="test-org",
+    )
+
+    expect_auth_error(
+        lambda: service.decode_access_token(wrong_issuer_token),
+        "Wrong issuer rejected.",
+    )
+
+    expect_auth_error(
+        lambda: service.decode_access_token("invalid.token.value"),
+        "Invalid signature/token rejected.",
+    )
+
+    expect_auth_error(
+        lambda: service.decode_access_token(refresh_token),
+        "Wrong token type rejected.",
+    )
+
     print("JWT authentication test passed successfully.")
 
 

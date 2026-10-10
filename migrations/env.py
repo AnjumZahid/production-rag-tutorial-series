@@ -4,16 +4,16 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from backend.app.core.config import settings
-from backend.app.core.exceptions import ConfigurationError
 from backend.app.database.base import Base
-
-# Import models so SQLAlchemy/Alembic can register their tables.
-from backend.app.database.models import (  # noqa: F401
+from backend.app.database.models import (
     DocumentChunkRecord,
     DocumentRecord,
+    OrganizationRecord,
+    RefreshTokenRecord,
+    UserRecord,
 )
 
 
@@ -27,42 +27,34 @@ target_metadata = Base.metadata
 
 
 def get_database_url() -> str:
-    """Return the async MySQL connection URL from application settings."""
-
     if settings.database_url is None:
-        raise ConfigurationError(
-            message="DATABASE_URL is missing from the environment."
-        )
+        raise RuntimeError("DATABASE_URL is not configured.")
 
     return settings.database_url.get_secret_value()
 
 
 def run_migrations_offline() -> None:
-    """Generate migration SQL without opening a database connection."""
+    url = get_database_url()
 
     context.configure(
-        url=get_database_url(),
+        url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={
             "paramstyle": "named",
         },
-        compare_type=True,
-        compare_server_default=True,
     )
 
     with context.begin_transaction():
         context.run_migrations()
 
 
-def do_run_migrations(connection: Connection) -> None:
-    """Run migrations through the provided synchronous connection wrapper."""
-
+def do_run_migrations(
+    connection: Connection,
+) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        compare_type=True,
-        compare_server_default=True,
     )
 
     with context.begin_transaction():
@@ -70,23 +62,26 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    """Create an async engine and execute Alembic migrations."""
+    configuration = config.get_section(
+        config.config_ini_section,
+        {},
+    )
 
-    engine = create_async_engine(
-        get_database_url(),
+    configuration["sqlalchemy.url"] = get_database_url()
+
+    connectable = async_engine_from_config(
+        configuration,
+        prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
-    try:
-        async with engine.connect() as connection:
-            await connection.run_sync(do_run_migrations)
-    finally:
-        await engine.dispose()
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
+
+    await connectable.dispose()
 
 
 def run_migrations_online() -> None:
-    """Run migrations against the configured MySQL database."""
-
     asyncio.run(run_async_migrations())
 
 
@@ -94,3 +89,8 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+
+
+# uv run alembic upgrade head
+# uv run alembic revision --autogenerate -m "add authentication tables"
+# uv run alembic upgrade head

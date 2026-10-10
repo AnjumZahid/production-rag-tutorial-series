@@ -259,7 +259,7 @@ class Settings(BaseSettings):
     auth_jwt_audience: str = "rag-app-api"
 
     auth_access_token_expire_minutes: int = Field(
-        default=60,
+        default=15,
         ge=1,
         le=1440,
     )
@@ -269,6 +269,12 @@ class Settings(BaseSettings):
         ge=0,
         le=300,
     )
+
+    auth_refresh_token_expire_days: int = Field(
+    default=30,
+    ge=1,
+    le=365,
+)
 
 
 
