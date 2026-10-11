@@ -9,6 +9,9 @@ from backend.app.database.models.auth import (
     RefreshTokenRecord,
     UserRecord,
 )
+from backend.app.database.models.membership import (
+    MembershipRecord,
+)
 
 
 def utc_now() -> datetime:
@@ -81,10 +84,16 @@ class AuthRepository:
             select(UserRecord, OrganizationRecord)
             .join(
                 OrganizationRecord,
-                UserRecord.organization_id == OrganizationRecord.id,
+                UserRecord.organization_id
+                == OrganizationRecord.id,
             )
-            .where(UserRecord.id == user_id)
-            .where(UserRecord.organization_id == organization_id)
+            .where(
+                UserRecord.id == user_id
+            )
+            .where(
+                UserRecord.organization_id
+                == organization_id
+            )
         )
 
         result = await self.session.execute(statement)
@@ -122,6 +131,29 @@ class AuthRepository:
 
         return user
 
+    async def create_owner_membership(
+        self,
+        *,
+        organization_id: str,
+        user_id: str,
+    ) -> MembershipRecord:
+        """
+        Create the initial owner membership for a newly
+        registered user.
+        """
+
+        membership = MembershipRecord(
+            id=uuid4().hex,
+            organization_id=organization_id,
+            user_id=user_id,
+            role="owner",
+            is_active=True,
+        )
+
+        self.session.add(membership)
+
+        return membership
+
     async def create_refresh_token(
         self,
         *,
@@ -150,7 +182,10 @@ class AuthRepository:
     ) -> RefreshTokenRecord | None:
         statement = (
             select(RefreshTokenRecord)
-            .where(RefreshTokenRecord.token_hash == token_hash)
+            .where(
+                RefreshTokenRecord.token_hash
+                == token_hash
+            )
             .with_for_update()
         )
 
@@ -172,11 +207,15 @@ class AuthRepository:
         user_id: str,
         organization_id: str,
     ) -> None:
-        token_statement = select(RefreshTokenRecord).where(
+        token_statement = select(
+            RefreshTokenRecord
+        ).where(
             RefreshTokenRecord.user_id == user_id
         )
 
-        token_result = await self.session.execute(token_statement)
+        token_result = await self.session.execute(
+            token_statement
+        )
 
         for token in token_result.scalars().all():
             await self.session.delete(token)
@@ -185,20 +224,28 @@ class AuthRepository:
             UserRecord.id == user_id
         )
 
-        user_result = await self.session.execute(user_statement)
+        user_result = await self.session.execute(
+            user_statement
+        )
+
         user = user_result.scalar_one_or_none()
 
         if user is not None:
             await self.session.delete(user)
 
-        organization_statement = select(OrganizationRecord).where(
+        organization_statement = select(
+            OrganizationRecord
+        ).where(
             OrganizationRecord.id == organization_id
         )
 
         organization_result = await self.session.execute(
             organization_statement
         )
-        organization = organization_result.scalar_one_or_none()
+
+        organization = (
+            organization_result.scalar_one_or_none()
+        )
 
         if organization is not None:
             await self.session.delete(organization)

@@ -4,13 +4,16 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
+from sqlalchemy.ext.asyncio import (
+    async_engine_from_config,
+)
 
 from backend.app.core.config import settings
 from backend.app.database.base import Base
 from backend.app.database.models import (
     DocumentChunkRecord,
     DocumentRecord,
+    MembershipRecord,
     OrganizationRecord,
     RefreshTokenRecord,
     UserRecord,
@@ -19,8 +22,11 @@ from backend.app.database.models import (
 
 config = context.config
 
+
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(
+        config.config_file_name
+    )
 
 
 target_metadata = Base.metadata
@@ -28,7 +34,9 @@ target_metadata = Base.metadata
 
 def get_database_url() -> str:
     if settings.database_url is None:
-        raise RuntimeError("DATABASE_URL is not configured.")
+        raise RuntimeError(
+            "DATABASE_URL is not configured."
+        )
 
     return settings.database_url.get_secret_value()
 
@@ -67,7 +75,9 @@ async def run_async_migrations() -> None:
         {},
     )
 
-    configuration["sqlalchemy.url"] = get_database_url()
+    configuration[
+        "sqlalchemy.url"
+    ] = get_database_url()
 
     connectable = async_engine_from_config(
         configuration,
@@ -76,13 +86,17 @@ async def run_async_migrations() -> None:
     )
 
     async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
+        await connection.run_sync(
+            do_run_migrations
+        )
 
     await connectable.dispose()
 
 
 def run_migrations_online() -> None:
-    asyncio.run(run_async_migrations())
+    asyncio.run(
+        run_async_migrations()
+    )
 
 
 if context.is_offline_mode():
@@ -92,5 +106,6 @@ else:
 
 
 # uv run alembic upgrade head
-# uv run alembic revision --autogenerate -m "add authentication tables"
+# uv run alembic revision --autogenerate -m "create organization membership records"
 # uv run alembic upgrade head
+

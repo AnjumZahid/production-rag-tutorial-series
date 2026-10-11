@@ -1,0 +1,22 @@
+[33m9e49d7f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mtutorial-series[m[33m)[m Video 13 Part 1: add organization membership foundation, roles, membership model, repository, migrations, and tests
+[33m0006f95[m[33m ([m[1;33mtag: [m[1;33mvideo-12[m[33m, [m[1;31morigin/tutorial-series[m[33m)[m Video 12: add database-backed authentication system with JWT, user management, and refresh token workflow
+[33mf6d5d00[m[33m ([m[1;33mtag: [m[1;33mvideo-11-part-2[m[33m)[m Video 11 Part 2: add JWT authentication, protected API endpoints, and secure user identity verification
+[33m718ceb2[m[33m ([m[1;33mtag: [m[1;33mvideo-11-part-1[m[33m)[m Video 11 Part 1: add FastAPI API layer, RAG endpoints, schemas, dependencies, and Swagger integration
+[33m6614363[m[33m ([m[1;33mtag: [m[1;33mvideo-10-part-2[m[33m)[m Video 10 Part 2: add real end-to-end RAG query service and orchestration test pipeline
+[33mef8980c[m[33m ([m[1;33mtag: [m[1;33mvideo-10-part-1[m[33m)[m Video 10 Part 1: add Gemini LLM provider, base interface, factory pattern, and configuration settings
+[33m4c9ca9b[m[33m ([m[1;33mtag: [m[1;33mvideo-09-part-3[m[33m)[m Video 09: add real document ingestion, retrieval service, and grounded generation service
+[33m12b6b4d[m[33m ([m[1;33mtag: [m[1;33mvideo-09-part-2[m[33m)[m Video 09: add real document ingestion, retrieval service, and grounded generation service
+[33m1d62e98[m[33m ([m[1;33mtag: [m[1;33mvideo-09-part-1[m[33m)[m Video 09: add real document ingestion, retrieval service, and grounded generation service
+[33m83f8fe6[m[33m ([m[1;33mtag: [m[1;33mvideo-08-part-3[m[33m)[m Video 08: add real component interface audit
+[33mb40d78d[m[33m ([m[1;33mtag: [m[1;33mvideo-08-part-2[m[33m)[m Video 08: add document ingestion service
+[33m9958a1a[m[33m ([m[1;33mtag: [m[1;33mvideo-08-part-1[m[33m)[m Video 08: add document repository layer
+[33mc8f2643[m[33m ([m[1;33mtag: [m[1;33mvideo-07[m[33m)[m Video 07: add Docker MySQL setup and Alembic migrations
+[33m1d404a6[m[33m ([m[1;33mtag: [m[1;33mvideo-06[m[33m)[m Remove Python cache files from Video 06 snapshot
+[33m44910d8[m Video 06: add database and vector store foundation
+[33m9b70c79[m[33m ([m[1;33mtag: [m[1;33mvideo-05[m[33m)[m Fix Video 05 embedding configuration and exceptions
+[33m1e94172[m Video 05: add embeddings and provider factory
+[33mcdf84d6[m[33m ([m[1;33mtag: [m[1;33mvideo-04[m[33m)[m Video 04: add document ingestion pipeline
+[33m89a3e8f[m[33m ([m[1;33mtag: [m[1;33mvideo-03[m[33m)[m Video 03: initial project setup and first implementation
+[33m3d225f2[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m Revise README with project overview and setup instructions
+[33m034751f[m Add README for Production-Grade RAG Platform
+[33m72a1b69[m Initial complete Production RAG application
