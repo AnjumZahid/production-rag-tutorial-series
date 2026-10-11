@@ -34,6 +34,23 @@ class AuthRepository:
 
         return result.scalar_one_or_none()
 
+    async def get_organization_by_id(
+        self,
+        organization_id: str,
+    ) -> OrganizationRecord | None:
+        statement = select(
+            OrganizationRecord
+        ).where(
+            OrganizationRecord.id
+            == organization_id
+        )
+
+        result = await self.session.execute(
+            statement
+        )
+
+        return result.scalar_one_or_none()
+
     async def create_organization(
         self,
         *,

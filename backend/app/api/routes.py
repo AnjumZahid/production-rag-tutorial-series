@@ -12,11 +12,12 @@ from fastapi import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.dependencies import (
-    RequestIdentity,
+    OrganizationAccess,
     get_database_session_dependency,
     get_embedding_provider_dependency,
     get_llm_provider_dependency,
-    get_request_identity,
+    require_document_read_access,
+    require_document_write_access,
 )
 from backend.app.api.schemas import (
     DocumentUploadResponse,
@@ -25,6 +26,7 @@ from backend.app.api.schemas import (
     RAGQueryResponse,
     RAGSourceResponse,
 )
+
 from backend.app.core.config import settings
 from backend.app.core.exceptions import InvalidUploadError
 from backend.app.database.repositories import DocumentRepository
@@ -67,8 +69,8 @@ async def health() -> HealthResponse:
 async def upload_document(
     knowledge_base_id: str = Form(...),
     file: UploadFile = File(...),
-    identity: RequestIdentity = Depends(
-        get_request_identity
+    access: OrganizationAccess = Depends(
+        require_document_write_access
     ),
     session: AsyncSession = Depends(
         get_database_session_dependency
@@ -83,7 +85,8 @@ async def upload_document(
         prefix="rag_upload_"
     ) as temporary_directory:
         safe_filename = Path(
-            file.filename or "document.pdf"
+            file.filename
+            or "document.pdf"
         ).name
 
         temporary_path = (
@@ -98,12 +101,14 @@ async def upload_document(
 
         vector_store = get_vector_store(
             embedding_provider=embedding_provider,
-            organization_id=identity.organization_id,
-            user_id=identity.user_id,
+            organization_id=access.organization_id,
+            user_id=access.user_id,
             knowledge_base_id=knowledge_base_id,
         )
 
-        repository = DocumentRepository(session)
+        repository = DocumentRepository(
+            session
+        )
 
         embedding_model_name = str(
             getattr(
@@ -119,40 +124,62 @@ async def upload_document(
             or settings.embedding_model_name
         )
 
-        ingestion_service = DocumentIngestionService(
-            session=session,
-            repository=repository,
-            loader=PDFDocumentLoader(),
-            parser=PDFDocumentParser(),
-            cleaner=TextCleaner(),
-            chunker=DocumentChunker(),
-            vector_store=vector_store,
-            embedding_provider_name=(
-                type(embedding_provider).__name__
-            ),
-            embedding_model_name=embedding_model_name,
-            embedding_dimension=384,
-            vector_store_provider_name=(
-                type(vector_store).__name__
-            ),
+        ingestion_service = (
+            DocumentIngestionService(
+                session=session,
+                repository=repository,
+                loader=PDFDocumentLoader(),
+                parser=PDFDocumentParser(),
+                cleaner=TextCleaner(),
+                chunker=DocumentChunker(),
+                vector_store=vector_store,
+                embedding_provider_name=(
+                    type(
+                        embedding_provider
+                    ).__name__
+                ),
+                embedding_model_name=(
+                    embedding_model_name
+                ),
+                embedding_dimension=384,
+                vector_store_provider_name=(
+                    type(
+                        vector_store
+                    ).__name__
+                ),
+            )
         )
 
-        result = await ingestion_service.ingest_pdf(
-            file_path=temporary_path,
-            organization_id=identity.organization_id,
-            user_id=identity.user_id,
-            knowledge_base_id=knowledge_base_id,
+        result = (
+            await ingestion_service
+            .ingest_pdf(
+                file_path=temporary_path,
+                organization_id=(
+                    access.organization_id
+                ),
+                user_id=access.user_id,
+                knowledge_base_id=(
+                    knowledge_base_id
+                ),
+            )
         )
 
         return DocumentUploadResponse(
-            document_id=result.document_id,
+            document_id=(
+                result.document_id
+            ),
             status=result.status,
             filename=safe_filename,
-            total_pages=result.total_pages,
-            chunk_count=result.chunk_count,
-            vector_count=len(result.vector_ids),
+            total_pages=(
+                result.total_pages
+            ),
+            chunk_count=(
+                result.chunk_count
+            ),
+            vector_count=len(
+                result.vector_ids
+            ),
         )
-
 
 @router.post(
     "/rag/query",
@@ -160,8 +187,8 @@ async def upload_document(
 )
 async def rag_query(
     request: RAGQueryRequest,
-    identity: RequestIdentity = Depends(
-        get_request_identity
+    access: OrganizationAccess = Depends(
+        require_document_read_access
     ),
     embedding_provider=Depends(
         get_embedding_provider_dependency
@@ -172,9 +199,11 @@ async def rag_query(
 ) -> RAGQueryResponse:
     vector_store = get_vector_store(
         embedding_provider=embedding_provider,
-        organization_id=identity.organization_id,
-        user_id=identity.user_id,
-        knowledge_base_id=request.knowledge_base_id,
+        organization_id=access.organization_id,
+        user_id=access.user_id,
+        knowledge_base_id=(
+            request.knowledge_base_id
+        ),
     )
 
     retrieval_service = RetrievalService(
@@ -183,14 +212,20 @@ async def rag_query(
         max_k=20,
     )
 
-    generation_service = GroundedAnswerService(
-        llm_provider=llm_provider,
-        max_context_characters=24_000,
+    generation_service = (
+        GroundedAnswerService(
+            llm_provider=llm_provider,
+            max_context_characters=24_000,
+        )
     )
 
     rag_service = RAGQueryService(
-        retrieval_service=retrieval_service,
-        generation_service=generation_service,
+        retrieval_service=(
+            retrieval_service
+        ),
+        generation_service=(
+            generation_service
+        ),
     )
 
     result = await rag_service.answer(
@@ -203,18 +238,30 @@ async def rag_query(
         query=result.query,
         answer=result.answer,
         grounded=result.grounded,
-        citations=list(result.citations),
+        citations=list(
+            result.citations
+        ),
         sources=[
             RAGSourceResponse(
-                citation_id=source.citation_id,
-                document_id=source.document_id,
-                chunk_id=source.chunk_id,
+                citation_id=(
+                    source.citation_id
+                ),
+                document_id=(
+                    source.document_id
+                ),
+                chunk_id=(
+                    source.chunk_id
+                ),
                 filename=source.filename,
-                page_number=source.page_number,
+                page_number=(
+                    source.page_number
+                ),
             )
             for source in result.sources
         ],
-        retrieved_chunk_count=result.retrieved_chunk_count,
+        retrieved_chunk_count=(
+            result.retrieved_chunk_count
+        ),
     )
 
 
